@@ -1,0 +1,200 @@
+# =============================================================================
+#  DAQ platform configuration
+# =============================================================================
+#  This file is the single source of truth for what the rig measures.
+#  Edit it when your sensors arrive - nothing in the UI or the server needs
+#  to change. Restart the server to pick up edits.
+# =============================================================================
+
+rig:
+  name: "Data Center Cold Plate Loop"
+  subtitle: "Single-phase liquid cooling test stand"
+
+# -----------------------------------------------------------------------------
+#  Working fluid - used by the derived-channel physics (mass flow, heat, power)
+# -----------------------------------------------------------------------------
+fluid:
+  name: "Water"
+  density_kg_m3: 997.0      # rho  at ~25 C
+  cp_j_kgk: 4180.0          # specific heat capacity
+  flow_channel: Q_flow      # which channel feeds the `mdot` term below
+
+# -----------------------------------------------------------------------------
+#  Acquisition
+# -----------------------------------------------------------------------------
+acquisition:
+  source: simulator          # simulator | serial
+  rate_hz: 10                # expected sample rate (used for gap detection)
+
+  serial:
+    port: auto               # auto = pick the first Arduino-like port, or "COM3"
+    baud: 115200
+    # The firmware streams one line per sample:
+    #     D,<seq>,<millis>,<v1>,<v2>,...,<vN>
+    # where v1..vN are the `channels` below, in order.
+
+# -----------------------------------------------------------------------------
+#  Measured channels - one entry per physical sensor, IN THE ORDER THE ARDUINO
+#  SENDS THEM. `calibration` converts whatever the Arduino sends into `unit`.
+#
+#  calibration types:
+#    linear     gain, offset          out = raw * gain + offset
+#                                     (the default - use it when the firmware
+#                                      already sends engineering units)
+#    map        in_min/in_max ->      linear rescale, for raw ADC counts from
+#               out_min/out_max       0-5 V or 4-20 mA transducers
+#    steinhart  r_series, adc_max,    NTC thermistor, raw ADC counts -> degC
+#               a, b, c
+#    kfactor    k_pulses_per_litre    pulse-frequency flow meter, Hz -> L/min
+# -----------------------------------------------------------------------------
+channels:
+  # ---- Temperatures -------------------------------------------------------
+  - id: T_in
+    label: "Coolant inlet"
+    group: temperature
+    unit: "degC"
+    calibration: { type: linear }
+    warn_above: 40.0
+    alarm_above: 50.0
+    sim: { base: 25.0, noise: 0.05, drift: 0.3 }
+
+  - id: T_out
+    label: "Coolant outlet"
+    group: temperature
+    unit: "degC"
+    calibration: { type: linear }
+    warn_above: 50.0
+    alarm_above: 60.0
+    sim: { base: 33.0, noise: 0.06, drift: 0.4 }
+
+  - id: T_case
+    label: "Cold plate base"
+    group: temperature
+    unit: "degC"
+    calibration: { type: linear }
+    warn_above: 65.0
+    alarm_above: 80.0
+    sim: { base: 47.0, noise: 0.08, drift: 0.5 }
+
+  - id: T_amb
+    label: "Ambient air"
+    group: temperature
+    unit: "degC"
+    calibration: { type: linear }
+    sim: { base: 22.0, noise: 0.03, drift: 0.1 }
+
+  # ---- Pressures ----------------------------------------------------------
+  - id: P_in
+    label: "Cold plate inlet"
+    group: pressure
+    unit: "kPa"
+    calibration: { type: linear }
+    warn_above: 250.0
+    alarm_above: 320.0
+    sim: { base: 180.0, noise: 0.8, drift: 4.0 }
+
+  - id: P_out
+    label: "Cold plate outlet"
+    group: pressure
+    unit: "kPa"
+    calibration: { type: linear }
+    sim: { base: 148.0, noise: 0.8, drift: 3.5 }
+
+  # ---- Flow ---------------------------------------------------------------
+  - id: Q_flow
+    label: "Loop volumetric flow"
+    group: flow
+    unit: "L/min"
+    calibration: { type: linear }
+    warn_below: 0.8
+    alarm_below: 0.4
+    sim: { base: 1.9, noise: 0.015, drift: 0.08 }
+
+  # ---- Heater / load ------------------------------------------------------
+  - id: W_heater
+    label: "Simulated die load"
+    group: power
+    unit: "W"
+    calibration: { type: linear }
+    sim: { base: 420.0, noise: 2.0, drift: 15.0 }
+
+# -----------------------------------------------------------------------------
+#  Derived channels - computed on every sample from measured channels.
+#
+#  `expr` may reference any measured or previously-defined derived channel id,
+#  plus: rho (fluid density), cp (specific heat), mdot (mass flow, kg/s),
+#  and the math functions abs/min/max/sqrt/log/exp/pow.
+#  Division by zero yields null rather than an error.
+# -----------------------------------------------------------------------------
+derived:
+  - id: dT
+    label: "Cold plate rise"
+    group: temperature
+    unit: "K"
+    expr: "T_out - T_in"
+    warn_above: 12.0
+
+  - id: dP
+    label: "Cold plate drop"
+    group: pressure
+    unit: "kPa"
+    expr: "P_in - P_out"
+    warn_above: 60.0
+
+  - id: Q_removed
+    label: "Heat removed"
+    group: power
+    unit: "W"
+    expr: "mdot * cp * dT"
+
+  - id: R_th
+    label: "Thermal resistance"
+    group: performance
+    unit: "K/W"
+    expr: "(T_case - T_in) / Q_removed"
+
+  - id: W_pump
+    label: "Pumping power"
+    group: performance
+    unit: "W"
+    # dP in kPa * flow in L/min  ->  W   (1 kPa * 1 L/min = 1/60 W)
+    expr: "dP * Q_flow / 60.0"
+
+  - id: heat_balance
+    label: "Heat balance"
+    group: performance
+    unit: "%"
+    expr: "100.0 * Q_removed / W_heater"
+    warn_below: 85.0
+    warn_above: 115.0
+
+# -----------------------------------------------------------------------------
+#  Dashboard layout
+# -----------------------------------------------------------------------------
+dashboard:
+  # Big numbers across the top, in order.
+  tiles: [Q_removed, dT, Q_flow, dP, T_case, R_th]
+
+  # One chart per entry. `channels` lists the series drawn on it.
+  # Keep each chart to 8 series or fewer - colors are assigned in fixed
+  # order from a colorblind-validated palette and are never recycled.
+  charts:
+    - title: "Temperatures"
+      unit: "degC"
+      channels: [T_in, T_out, T_case, T_amb]
+    - title: "Pressure"
+      unit: "kPa"
+      channels: [P_in, P_out, dP]
+    - title: "Flow rate"
+      unit: "L/min"
+      channels: [Q_flow]
+    - title: "Thermal power"
+      unit: "W"
+      channels: [W_heater, Q_removed]
+
+# -----------------------------------------------------------------------------
+#  Storage
+# -----------------------------------------------------------------------------
+storage:
+  directory: "data"          # run CSVs are written here
+  buffer_samples: 72000      # in-memory history served to the UI (2 h at 10 Hz)

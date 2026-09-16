@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DAQ</title>
+<link rel="stylesheet" href="/static/vendor/uPlot.min.css">
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar__identity">
+    <span class="status-dot" id="statusDot" data-state="connecting"></span>
+    <div class="topbar__names">
+      <h1 id="rigName">Loading</h1>
+      <p id="rigSubtitle"></p>
+    </div>
+  </div>
+
+  <dl class="topbar__vitals">
+    <div class="vital">
+      <dt>Link</dt>
+      <dd id="vitalLink">connecting</dd>
+    </div>
+    <div class="vital">
+      <dt>Rate</dt>
+      <dd><span id="vitalRate">--</span> <span class="vital__unit">Hz</span></dd>
+    </div>
+    <div class="vital">
+      <dt>Samples</dt>
+      <dd id="vitalSamples">0</dd>
+    </div>
+    <div class="vital">
+      <dt>Dropped</dt>
+      <dd id="vitalDropped">0</dd>
+    </div>
+  </dl>
+
+  <div class="topbar__actions">
+    <label class="select">
+      <span class="select__label">Source</span>
+      <select id="sourceSelect">
+        <option value="simulator">Simulator</option>
+        <option value="serial">Arduino (serial)</option>
+      </select>
+    </label>
+    <button type="button" class="btn btn--record" id="recordBtn">
+      <span class="btn__dot"></span>
+      <span id="recordLabel">Record</span>
+    </button>
+    <button type="button" class="btn btn--icon" id="themeBtn" title="Toggle light / dark" aria-label="Toggle light or dark theme">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="recording-bar" id="recordingBar" hidden>
+  <span class="recording-bar__pulse"></span>
+  <strong id="recordingName">run</strong>
+  <span class="recording-bar__meta">
+    <span id="recordingSamples">0</span> samples &middot;
+    <span id="recordingElapsed">00:00</span> &middot;
+    <span id="recordingFile" class="mono"></span>
+  </span>
+  <button type="button" class="btn btn--ghost btn--small" id="stopRecordBtn">Stop</button>
+</div>
+
+<main class="layout">
+
+  <section class="tiles" id="tiles" aria-label="Key readings"></section>
+
+  <section class="panel panel--charts">
+    <div class="panel__head">
+      <h2>Time series</h2>
+      <div class="segmented" id="windowPicker" role="group" aria-label="Time window">
+        <button type="button" data-window="60">1m</button>
+        <button type="button" data-window="300" class="is-active">5m</button>
+        <button type="button" data-window="900">15m</button>
+        <button type="button" data-window="3600">1h</button>
+        <button type="button" data-window="0">All</button>
+      </div>
+    </div>
+    <div class="charts" id="charts"></div>
+  </section>
+
+  <aside class="rail">
+    <section class="panel">
+      <div class="panel__head">
+        <h2>Channels</h2>
+        <span class="panel__hint" id="channelClock">--:--:--</span>
+      </div>
+      <div class="table-wrap">
+        <table class="channels" id="channelTable">
+          <colgroup>
+            <col class="c-name"><col class="c-value"><col class="c-status"><col class="c-zero">
+          </colgroup>
+          <thead>
+            <tr>
+              <th scope="col">Channel</th>
+              <th scope="col" class="num">Value</th>
+              <th scope="col">Status</th>
+              <th scope="col"><span class="sr-only">Zero</span></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel__head">
+        <h2>Recorded runs</h2>
+        <button type="button" class="btn btn--ghost btn--small" id="refreshRunsBtn">Refresh</button>
+      </div>
+      <ul class="runs" id="runsList"></ul>
+      <p class="panel__foot mono" id="runsDir"></p>
+    </section>
+  </aside>
+</main>
+
+<dialog class="dialog" id="recordDialog">
+  <form method="dialog" id="recordForm">
+    <h2>Start a run</h2>
+    <p class="dialog__note">Everything streaming right now gets written to a CSV, with a JSON sidecar describing the channels and calibration.</p>
+    <label class="field">
+      <span>Run name</span>
+      <input name="name" id="runName" placeholder="e.g. 420 W step, 1.9 L/min" autocomplete="off">
+    </label>
+    <label class="field">
+      <span>Operator</span>
+      <input name="operator" id="runOperator" placeholder="Optional" autocomplete="off">
+    </label>
+    <label class="field">
+      <span>Notes</span>
+      <textarea name="notes" id="runNotes" rows="3" placeholder="Optional. Rig conditions, what you are testing."></textarea>
+    </label>
+    <div class="dialog__actions">
+      <button type="button" class="btn btn--ghost" id="cancelRecord">Cancel</button>
+      <button type="submit" class="btn btn--primary">Start recording</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="dialog" id="serialDialog">
+  <form method="dialog" id="serialForm">
+    <h2>Connect to Arduino</h2>
+    <p class="dialog__note">Pick the port the board is on. Ports flagged as a likely board matched a known USB vendor id.</p>
+    <div class="ports" id="portList"></div>
+    <div class="dialog__actions">
+      <button type="button" class="btn btn--ghost" id="cancelSerial">Cancel</button>
+      <button type="submit" class="btn btn--primary">Connect</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="/static/vendor/uPlot.iife.min.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
