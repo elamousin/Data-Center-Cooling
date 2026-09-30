@@ -1,0 +1,182 @@
+{
+  "run": {
+    "name": "Run 2026-09-16 18:10:17",
+    "filename": "2026-09-16_181017_run-2026-09-16-18-10-17.csv",
+    "started_at": "2026-09-16T18:10:17-04:00",
+    "started_unix": 1789596617.1003184,
+    "operator": "",
+    "notes": "",
+    "samples": 46,
+    "ended_at": "2026-09-16T18:10:21-04:00",
+    "duration_s": 4.521991491317749
+  },
+  "rig": {
+    "name": "Data Center Cold Plate Loop",
+    "subtitle": "Single-phase liquid cooling test stand"
+  },
+  "fluid": {
+    "name": "Water",
+    "density_kg_m3": 997.0,
+    "cp_j_kgk": 4180.0
+  },
+  "acquisition": {
+    "source": "simulator",
+    "rate_hz": 10.0
+  },
+  "channels": [
+    {
+      "id": "T_in",
+      "label": "Coolant inlet",
+      "unit": "degC",
+      "group": "temperature",
+      "derived": false,
+      "calibration": {
+        "type": "linear"
+      },
+      "tare": 0.0
+    },
+    {
+      "id": "T_out",
+      "label": "Coolant outlet",
+      "unit": "degC",
+      "group": "temperature",
+      "derived": false,
+      "calibration": {
+        "type": "linear"
+      },
+      "tare": 0.0
+    },
+    {
+      "id": "T_case",
+      "label": "Cold plate base",
+      "unit": "degC",
+      "group": "temperature",
+      "derived": false,
+      "calibration": {
+        "type": "linear"
+      },
+      "tare": 0.0
+    },
+    {
+      "id": "T_amb",
+      "label": "Ambient air",
+      "unit": "degC",
+      "group": "temperature",
+      "derived": false,
+      "calibration": {
+        "type": "linear"
+      },
+      "tare": 0.0
+    },
+    {
+      "id": "P_in",
+      "label": "Cold plate inlet",
+      "unit": "kPa",
+      "group": "pressure",
+      "derived": false,
+      "calibration": {
+        "type": "linear"
+      },
+      "tare": 0.0
+    },
+    {
+      "id": "P_out",
+      "label": "Cold plate outlet",
+      "unit": "kPa",
+      "group": "pressure",
+      "derived": false,
+      "calibration": {
+        "type": "linear"
+      },
+      "tare": 0.0
+    },
+    {
+      "id": "Q_flow",
+      "label": "Loop volumetric flow",
+      "unit": "L/min",
+      "group": "flow",
+      "derived": false,
+      "calibration": {
+        "type": "linear"
+      },
+      "tare": 0.0
+    },
+    {
+      "id": "W_heater",
+      "label": "Simulated die load",
+      "unit": "W",
+      "group": "power",
+      "derived": false,
+      "calibration": {
+        "type": "linear"
+      },
+      "tare": 0.0
+    },
+    {
+      "id": "dT",
+      "label": "Cold plate rise",
+      "unit": "K",
+      "group": "temperature",
+      "derived": true,
+      "calibration": {
+        "type": "linear"
+      },
+      "tare": 0.0
+    },
+    {
+      "id": "dP",
+      "label": "Cold plate drop",
+      "unit": "kPa",
+      "group": "pressure",
+      "derived": true,
+      "calibration": {
+        "type": "linear"
+      },
+      "tare": 0.0
+    },
+    {
+      "id": "Q_removed",
+      "label": "Heat removed",
+      "unit": "W",
+      "group": "power",
+      "derived": true,
+      "calibration": {
+        "type": "linear"
+      },
+      "tare": 0.0
+    },
+    {
+      "id": "R_th",
+      "label": "Thermal resistance",
+      "unit": "K/W",
+      "group": "performance",
+      "derived": true,
+      "calibration": {
+        "type": "linear"
+      },
+      "tare": 0.0
+    },
+    {
+      "id": "W_pump",
+      "label": "Pumping power",
+      "unit": "W",
+      "group": "performance",
+      "derived": true,
+      "calibration": {
+        "type": "linear"
+      },
+      "tare": 0.0
+    },
+    {
+      "id": "heat_balance",
+      "label": "Heat balance",
+      "unit": "%",
+      "group": "performance",
+      "derived": true,
+      "calibration": {
+        "type": "linear"
+      },
+      "tare": 0.0
+    }
+  ]
+}

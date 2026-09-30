@@ -1,0 +1,131 @@
+/* =============================================================================
+   ADALM bench test page. Builds on styles.css; only adds what the page needs.
+   ========================================================================== */
+
+a.btn { text-decoration: none; }
+
+.notice {
+  padding: 9px 20px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  background: color-mix(in srgb, var(--warning) 10%, var(--surface));
+  border-bottom: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+}
+
+.bench {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    "tiles    tiles"
+    "charts   charts"
+    "findings raw";
+  gap: var(--gap);
+  padding: var(--gap) 20px 28px;
+  max-width: 1760px;
+  margin: 0 auto;
+}
+.bench .tiles    { grid-area: tiles; }
+.bench__charts   { grid-area: charts; }
+.bench__findings { grid-area: findings; }
+.bench__raw      { grid-area: raw; display: flex; flex-direction: column; }
+
+@media (max-width: 1100px) {
+  .bench {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "tiles" "charts" "findings" "raw";
+  }
+}
+@media (max-width: 640px) {
+  .bench { padding: var(--gap) 16px 24px; }
+  .topbar { padding-left: 16px; padding-right: 16px; }
+  .topbar__vitals { margin-left: 0; flex-wrap: wrap; }
+  .topbar__actions { flex-wrap: wrap; }
+}
+
+.bench__empty { color: var(--ink-muted); font-size: 13px; padding: 6px 2px; }
+
+.tile__stats {
+  display: flex; flex-wrap: wrap; gap: 2px 12px;
+  font-size: 11px; color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+.tile__stats b { color: var(--ink-2); font-weight: 600; }
+
+.panel__tools { display: flex; gap: 6px; }
+
+/* ------------------------------------------------------------- findings */
+
+.capture {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 10px;
+  padding: 14px 16px 6px;
+}
+.capture select, .capture input { width: 100%; }
+.capture .field select { padding: 8px 10px; background: var(--surface-sunk); }
+@media (max-width: 640px) {
+  .capture { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .capture .btn { grid-column: 1 / -1; justify-content: center; }
+}
+.capture__hint { padding: 0 16px 12px; font-size: 12px; color: var(--ink-muted); line-height: 1.5; }
+
+.fit {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.fit:empty { display: none; }
+.fit > div { background: var(--surface); padding: 10px 14px; }
+.fit dt {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.07em; color: var(--ink-muted);
+}
+.fit dd { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.fit dd small { font-size: 11px; font-weight: 500; color: var(--ink-muted); margin-left: 3px; }
+
+table.points { width: 100%; border-collapse: collapse; }
+table.points th {
+  position: sticky; top: 0;
+  padding: 7px 10px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.07em; color: var(--ink-muted);
+  white-space: nowrap;
+}
+table.points td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+table.points .num { text-align: right; }
+table.points .err-high { color: var(--critical); font-weight: 600; }
+table.points .empty td { color: var(--ink-muted); text-align: center; padding: 18px; }
+.row-x {
+  border: 0; background: none; color: var(--ink-muted);
+  cursor: pointer; font-size: 14px; line-height: 1; padding: 2px 4px;
+}
+.row-x:hover { color: var(--critical); }
+
+/* ------------------------------------------------------------ raw log */
+
+.raw {
+  flex: 1;
+  margin: 0;
+  min-height: 220px;
+  max-height: 420px;
+  overflow: auto;
+  padding: 10px 16px;
+  font: 12px/1.55 var(--mono);
+  color: var(--ink-2);
+  background: var(--surface-sunk);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.raw .ts { color: var(--ink-muted); }
+.raw .bad { color: var(--warning); }

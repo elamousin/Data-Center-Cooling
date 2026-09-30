@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ADALM2000 ADC Test</title>
+<link rel="stylesheet" href="/static/vendor/uPlot.min.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/adalm.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar__identity">
+    <span class="status-dot" id="statusDot" data-state="disconnected"></span>
+    <div class="topbar__names">
+      <h1>ADALM2000 ADC test</h1>
+      <p id="linkDetail">Not connected</p>
+    </div>
+  </div>
+
+  <dl class="topbar__vitals">
+    <div class="vital">
+      <dt>Port</dt>
+      <dd id="vitalPort">--</dd>
+    </div>
+    <div class="vital">
+      <dt>Rate</dt>
+      <dd><span id="vitalRate">--</span> <span class="vital__unit">Hz</span></dd>
+    </div>
+    <div class="vital">
+      <dt>Lines</dt>
+      <dd id="vitalLines">0</dd>
+    </div>
+    <div class="vital">
+      <dt>Unparsed</dt>
+      <dd id="vitalUnparsed">0</dd>
+    </div>
+  </dl>
+
+  <div class="topbar__actions">
+    <label class="select">
+      <span class="select__label">Port</span>
+      <select id="portSelect"><option value="">Auto</option></select>
+    </label>
+    <label class="select">
+      <span class="select__label">Baud</span>
+      <select id="baudSelect">
+        <option>9600</option><option>19200</option><option>38400</option>
+        <option>57600</option><option>115200</option>
+      </select>
+    </label>
+    <button type="button" class="btn btn--primary" id="connectBtn">Connect</button>
+    <a class="btn btn--ghost" href="/">Main dashboard</a>
+    <button type="button" class="btn btn--icon" id="themeBtn" title="Toggle light / dark" aria-label="Toggle light or dark theme">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="notice" id="notice">
+  Close the Arduino IDE <strong>Serial Monitor</strong> (and Serial Plotter) first &mdash;
+  Windows lets only one program hold a COM port at a time. The sketch itself does not need to change.
+</div>
+
+<main class="bench">
+
+  <section class="tiles" id="tiles" aria-label="Live readings">
+    <p class="bench__empty">Waiting for data. Connect to the Arduino to start.</p>
+  </section>
+
+  <section class="panel bench__charts">
+    <div class="panel__head">
+      <h2>Live readings</h2>
+      <div class="segmented" id="windowPicker" role="group" aria-label="Time window">
+        <button type="button" data-window="30">30s</button>
+        <button type="button" data-window="120" class="is-active">2m</button>
+        <button type="button" data-window="600">10m</button>
+        <button type="button" data-window="0">All</button>
+      </div>
+    </div>
+    <div class="charts" id="charts"></div>
+  </section>
+
+  <section class="panel bench__findings">
+    <div class="panel__head">
+      <h2>Findings &middot; ADALM set point vs Arduino reading</h2>
+      <div class="panel__tools">
+        <button type="button" class="btn btn--ghost btn--small" id="exportPointsBtn">Points CSV</button>
+        <button type="button" class="btn btn--ghost btn--small" id="clearPointsBtn">Clear</button>
+      </div>
+    </div>
+
+    <form class="capture" id="captureForm">
+      <label class="field">
+        <span>ADALM output (V)</span>
+        <input id="setInput" type="number" step="any" inputmode="decimal" placeholder="e.g. 2.500" required>
+      </label>
+      <label class="field">
+        <span>Measured field</span>
+        <select id="measuredSelect"></select>
+      </label>
+      <label class="field">
+        <span>Average over</span>
+        <select id="avgSelect">
+          <option value="2">2 s</option>
+          <option value="5" selected>5 s</option>
+          <option value="10">10 s</option>
+        </select>
+      </label>
+      <button type="submit" class="btn btn--primary" id="captureBtn">Capture point</button>
+    </form>
+    <p class="capture__hint">
+      Set a voltage on the ADALM2000 (Scopy &rarr; Power Supply or Signal Generator DC), let it settle, type the
+      same value here and capture. Step through the range (e.g. 0, 0.5, 1 &hellip; 5 V) to see offset, gain error and linearity.
+    </p>
+
+    <dl class="fit" id="fit"></dl>
+
+    <div class="table-wrap">
+      <table class="points" id="pointsTable">
+        <thead>
+          <tr>
+            <th scope="col" class="num">Set (V)</th>
+            <th scope="col" class="num">Measured</th>
+            <th scope="col" class="num">Error (mV)</th>
+            <th scope="col" class="num" id="adcHead">ADC mean</th>
+            <th scope="col" class="num">ADC ideal</th>
+            <th scope="col" class="num">Noise (&sigma;)</th>
+            <th scope="col" class="num">n</th>
+            <th scope="col"><span class="sr-only">Remove</span></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel bench__raw">
+    <div class="panel__head">
+      <h2>Serial output</h2>
+      <div class="panel__tools">
+        <button type="button" class="btn btn--ghost btn--small" id="exportStreamBtn">Session CSV</button>
+        <button type="button" class="btn btn--ghost btn--small" id="pauseRawBtn">Pause</button>
+      </div>
+    </div>
+    <pre class="raw" id="raw"></pre>
+  </section>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="/static/vendor/uPlot.iife.min.js"></script>
+<script src="/static/adalm.js"></script>
+</body>
+</html>

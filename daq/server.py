@@ -12,6 +12,7 @@ from fastapi import Body, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from .adalm import BenchStream
 from .config import RigConfig
 from .hub import Hub
 from .sources import list_serial_ports
@@ -24,6 +25,7 @@ DOWNLOADABLE_SUFFIXES = {".csv", ".json"}
 
 def create_app(config: RigConfig) -> FastAPI:
     hub = Hub(config)
+    bench = BenchStream()
 
     @contextlib.asynccontextmanager
     async def lifespan(_: FastAPI):
@@ -34,6 +36,7 @@ def create_app(config: RigConfig) -> FastAPI:
             with contextlib.suppress(Exception):
                 hub.recorder.stop()
             await hub.stop()
+            await bench.disconnect()
 
     app = FastAPI(title=config.name, lifespan=lifespan)
     app.state.hub = hub
@@ -44,6 +47,10 @@ def create_app(config: RigConfig) -> FastAPI:
     @app.get("/")
     async def index() -> FileResponse:
         return FileResponse(WEB_DIR / "index.html")
+
+    @app.get("/adalm")
+    async def adalm_page() -> FileResponse:
+        return FileResponse(WEB_DIR / "adalm.html")
 
     # ------------------------------------------------------------------ api
 
@@ -122,6 +129,30 @@ def create_app(config: RigConfig) -> FastAPI:
             raise HTTPException(404, "run file not found")
         return FileResponse(path, filename=safe_name, media_type="text/csv")
 
+    # ---------------------------------------------------------- bench test
+
+    @app.get("/api/adalm/state")
+    async def adalm_state() -> dict[str, Any]:
+        return bench.describe()
+
+    @app.post("/api/adalm/connect")
+    async def adalm_connect(payload: dict = Body(default={})) -> dict[str, Any]:
+        port = payload.get("port") or None
+        if port and hub.state()["source"].get("port") == port:
+            raise HTTPException(
+                409, f"{port} is in use by the main dashboard; switch it to the simulator first"
+            )
+        try:
+            await bench.connect(port, int(payload.get("baud") or 9600))
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+        return bench.describe()
+
+    @app.post("/api/adalm/disconnect")
+    async def adalm_disconnect() -> dict[str, Any]:
+        await bench.disconnect()
+        return bench.describe()
+
     # ------------------------------------------------------------ websocket
 
     @app.websocket("/ws")
@@ -146,5 +177,18 @@ def create_app(config: RigConfig) -> FastAPI:
             pass  # socket closed mid-send
         finally:
             hub.unsubscribe(queue)
+
+    @app.websocket("/ws/adalm")
+    async def adalm_stream(websocket: WebSocket) -> None:
+        await websocket.accept()
+        queue = bench.subscribe()
+        try:
+            await websocket.send_json({"type": "hello", **bench.snapshot()})
+            while True:
+                await websocket.send_json(await queue.get())
+        except (WebSocketDisconnect, asyncio.CancelledError, RuntimeError):
+            pass
+        finally:
+            bench.unsubscribe(queue)
 
     return app
